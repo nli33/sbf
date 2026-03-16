@@ -58,7 +58,20 @@ impl<R: Read, W: Write> Interpreter<R, W> {
                 self.cells[self.cell_ptr] = buf[0];
             },
             Some('[') => {
-                self.loop_stack.push(self.instr_ptr);
+                if self.cells[self.cell_ptr] != 0 {
+                    self.loop_stack.push(self.instr_ptr);
+                } else {
+                    let mut nest_level = 1;
+                    while nest_level > 0 {
+                        self.instr_ptr += 1;
+                        match self.instructions.chars().nth(self.instr_ptr) {
+                            Some('[') => nest_level += 1,
+                            Some(']') => nest_level -= 1,
+                            Some(_) => {},
+                            None => return Err("Unmatched '['".into())
+                        };
+                    }
+                }
             },
             Some(']') => {
                 if self.cells[self.cell_ptr] != 0 {
