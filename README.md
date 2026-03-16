@@ -20,7 +20,9 @@ When syscall instruction (`!`) occurs with the cell pointer at cell n:
 
 ## Example
 
-`test_prog` prints "hello\n" twice: first via normal Brainfuck instructions, then via a write syscall. Then, it exits via an exit syscall with exit code 67.
+The test program prints "hello\n" twice: first via normal Brainfuck instructions, then via a write syscall. Then, it exits via an exit syscall with exit code 67.
+
+Replace `test_prog` with the file name corresponding to your platform (e.g. `test_prog_macos-arm64`).
 
 ```
 $ cargo run test_prog
