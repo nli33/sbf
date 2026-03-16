@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::io::{Read, Write};
 use std::error::Error;
+use libc;
 
 pub struct Interpreter<R: Read, W: Write> {
     cells: Vec<u8>,
@@ -81,6 +82,9 @@ impl<R: Read, W: Write> Interpreter<R, W> {
                     self.loop_stack.pop();
                 }
             },
+            Some('!') => unsafe {
+                self.syscall()?;
+            },
             Some(_) => {},
             None => {}
         };
@@ -93,5 +97,59 @@ impl<R: Read, W: Write> Interpreter<R, W> {
             self.step()?;
         }
         Ok(())
+    }
+
+    unsafe fn syscall(&self) -> Result<u64, Box<dyn Error>> {
+        let args = self.collect_args(self.cell_ptr + 4)?;
+        let num: u32 = self.cells[self.cell_ptr    ] as u32
+                    | (self.cells[self.cell_ptr + 1] as u32) << 8
+                    | (self.cells[self.cell_ptr + 2] as u32) << 16
+                    | (self.cells[self.cell_ptr + 3] as u32) << 24;
+        Ok(unsafe {
+            match args.len() {
+                0 => libc::syscall(num as i32),
+                1 => libc::syscall(num as i32, args[0]),
+                2 => libc::syscall(num as i32, args[0], args[1]),
+                3 => libc::syscall(num as i32, args[0], args[1], args[2]),
+                4 => libc::syscall(num as i32, args[0], args[1], args[2], args[3]),
+                5 => libc::syscall(num as i32, args[0], args[1], args[2], args[3], args[4]),
+                6 => libc::syscall(num as i32, args[0], args[1], args[2], args[3], args[4], args[5]),
+                _ => { return Err("too many syscall arguments".into()) }
+            }
+        } as u64)
+    }
+
+    fn collect_args(&self, argc_idx: usize) -> Result<Vec<u64>, Box<dyn Error>> {
+        let mut args = Vec::new();
+        let argc = self.cells[argc_idx] as usize;
+        let args_begin = argc_idx + 1;
+        for i in 0..argc {
+            let arg_begin = args_begin + 9*i;
+            let arg_type = self.cells[arg_begin];
+            let arg_raw: u64 = self.cells[arg_begin + 1] as u64
+                            | (self.cells[arg_begin + 2] as u64) << 8
+                            | (self.cells[arg_begin + 3] as u64) << 16
+                            | (self.cells[arg_begin + 4] as u64) << 24
+                            | (self.cells[arg_begin + 5] as u64) << 32
+                            | (self.cells[arg_begin + 6] as u64) << 40
+                            | (self.cells[arg_begin + 7] as u64) << 48
+                            | (self.cells[arg_begin + 8] as u64) << 56;
+            let arg: u64 = match arg_type {
+                0 => arg_raw,
+                1 => {
+                    let offset = arg_raw as usize;
+                    if offset >= self.cells.len() {
+                        return Err(format!("pointer out of bounds ({}) at cell {}", offset, arg_begin).into());
+                    }
+                    unsafe {
+                        self.cells.as_ptr().add(offset) as u64
+                    }
+                },
+                _ => return Err(format!("invalid arg type at cell {}", arg_begin).into())
+            };
+            args.push(arg);
+        }
+
+        Ok(args)
     }
 }
