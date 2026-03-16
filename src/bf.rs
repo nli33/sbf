@@ -18,7 +18,6 @@ impl<R: Read, W: Write> Interpreter<R, W> {
         let mut instructions = String::new();
         file.read_to_string(&mut instructions)?;
 
-        // always use stdin/stdout for now
         Ok(Interpreter{
             cells: vec![0],
             instructions: instructions.chars().collect(),
