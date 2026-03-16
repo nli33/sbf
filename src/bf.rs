@@ -13,6 +13,16 @@ pub struct Interpreter<R: Read, W: Write> {
     output: W,
 }
 
+macro_rules! read_little_endian {
+    ($cells:expr, $idx:expr, $t:ty) => {{
+        let mut arr = [0u8; std::mem::size_of::<$t>()];
+        arr.copy_from_slice(
+            &$cells[$idx..$idx + std::mem::size_of::<$t>()]
+        );
+        <$t>::from_le_bytes(arr)
+    }};
+}
+
 impl<R: Read, W: Write> Interpreter<R, W> {
     pub fn new(file_name: &str, input: R, output: W) -> Result<Self, Box<dyn Error>> {
         let mut file = File::open(file_name)?;
@@ -101,10 +111,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
 
     unsafe fn syscall(&self) -> Result<u64, Box<dyn Error>> {
         let args = self.collect_args(self.cell_ptr + 4)?;
-        let num: u32 = self.cells[self.cell_ptr    ] as u32
-                    | (self.cells[self.cell_ptr + 1] as u32) << 8
-                    | (self.cells[self.cell_ptr + 2] as u32) << 16
-                    | (self.cells[self.cell_ptr + 3] as u32) << 24;
+        let num: u32 = read_little_endian!(self.cells, self.cell_ptr, u32);
         Ok(unsafe {
             match args.len() {
                 0 => libc::syscall(num as i32),
@@ -126,14 +133,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
         for i in 0..argc {
             let arg_begin = args_begin + 9*i;
             let arg_type = self.cells[arg_begin];
-            let arg_raw: u64 = self.cells[arg_begin + 1] as u64
-                            | (self.cells[arg_begin + 2] as u64) << 8
-                            | (self.cells[arg_begin + 3] as u64) << 16
-                            | (self.cells[arg_begin + 4] as u64) << 24
-                            | (self.cells[arg_begin + 5] as u64) << 32
-                            | (self.cells[arg_begin + 6] as u64) << 40
-                            | (self.cells[arg_begin + 7] as u64) << 48
-                            | (self.cells[arg_begin + 8] as u64) << 56;
+            let arg_raw: u64 = read_little_endian!(self.cells, arg_begin + 1, u64);
             let arg: u64 = match arg_type {
                 0 => arg_raw,
                 1 => {
