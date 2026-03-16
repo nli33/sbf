@@ -4,7 +4,7 @@ use std::error::Error;
 
 pub struct Interpreter<R: Read, W: Write> {
     cells: Vec<u8>,
-    instructions: String,
+    instructions: Vec<char>,
     instr_ptr: usize,
     cell_ptr: usize,
     loop_stack: Vec<usize>,
@@ -21,7 +21,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
         // always use stdin/stdout for now
         Ok(Interpreter{
             cells: vec![0],
-            instructions,
+            instructions: instructions.chars().collect(),
             instr_ptr: 0,
             cell_ptr: 0,
             loop_stack: Vec::new(),
@@ -31,7 +31,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
     }
 
     pub fn step(&mut self) -> Result<(), Box<dyn Error>> {
-        match self.instructions.chars().nth(self.instr_ptr) {
+        match self.instructions.get(self.instr_ptr) {
             Some('+') => {
                 self.cells[self.cell_ptr] = self.cells[self.cell_ptr].wrapping_add(1);
             },
@@ -51,6 +51,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
             },
             Some('.') => {
                 self.output.write_all(&[self.cells[self.cell_ptr]])?;
+                self.output.flush()?;
             },
             Some(',') => {
                 let mut buf = [0];
@@ -64,7 +65,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
                     let mut nest_level = 1;
                     while nest_level > 0 {
                         self.instr_ptr += 1;
-                        match self.instructions.chars().nth(self.instr_ptr) {
+                        match self.instructions.get(self.instr_ptr) {
                             Some('[') => nest_level += 1,
                             Some(']') => nest_level -= 1,
                             Some(_) => {},
