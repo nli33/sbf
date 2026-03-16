@@ -17,3 +17,15 @@ When syscall instruction (`!`) occurs with the cell pointer at cell n:
   - 1 (pointer)
 - Pointers should be given as an offset relative to the beginning of the tape. The interpreter will translate the relative address to a real pointer
 - All arguments are little-endian
+
+## Example
+
+`test_prog` prints "hello\n" twice: first via normal Brainfuck instructions, then via a write syscall. Then, it exits via an exit syscall with exit code 67.
+
+```
+$ cargo run test_prog
+hello
+hello
+$ echo $?
+67
+```
