@@ -74,6 +74,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
                 if self.cells[self.cell_ptr] != 0 {
                     self.loop_stack.push(self.instr_ptr);
                 } else {
+                    // skip loop by jumping forward to matching ']'
                     let mut nest_level = 1;
                     while nest_level > 0 {
                         self.instr_ptr += 1;
@@ -88,6 +89,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
             },
             Some(']') => {
                 if self.cells[self.cell_ptr] != 0 {
+                    // if current cell nonzero, jump back to matching '['
                     self.instr_ptr = *self.loop_stack.last().ok_or("Unmatched ']'")? + 1;
                     return Ok(());
                 } else {
