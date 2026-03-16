@@ -75,7 +75,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
             },
             Some(']') => {
                 if self.cells[self.cell_ptr] != 0 {
-                    self.instr_ptr = self.loop_stack.last().copied().unwrap(); // TODO: handle unmatched loop error
+                    self.instr_ptr = *self.loop_stack.last().ok_or("Unmatched ']'")? + 1;
                     return Ok(());
                 } else {
                     self.loop_stack.pop();
