@@ -3,16 +3,7 @@ use std::io::{Read, Write};
 use std::error::Error;
 use libc;
 
-pub struct Interpreter<R: Read, W: Write> {
-    cells: Vec<u8>,
-    instructions: Vec<char>,
-    instr_ptr: usize,
-    cell_ptr: usize,
-    loop_stack: Vec<usize>,
-    input: R,
-    output: W,
-}
-
+// read a little-endian value of type `$t` from `$cells` starting at index `$idx`
 macro_rules! read_little_endian {
     ($cells:expr, $idx:expr, $t:ty) => {{
         let mut arr = [0u8; std::mem::size_of::<$t>()];
@@ -21,6 +12,16 @@ macro_rules! read_little_endian {
         );
         <$t>::from_le_bytes(arr)
     }};
+}
+
+pub struct Interpreter<R: Read, W: Write> {
+    cells: Vec<u8>,
+    instructions: Vec<char>,
+    instr_ptr: usize,
+    cell_ptr: usize,
+    loop_stack: Vec<usize>,
+    input: R,
+    output: W,
 }
 
 impl<R: Read, W: Write> Interpreter<R, W> {
@@ -40,6 +41,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
         })
     }
 
+    // execute one instruction and advance instruction ptr
     pub fn step(&mut self) -> Result<(), Box<dyn Error>> {
         match self.instructions.get(self.instr_ptr) {
             Some('+') => {
@@ -102,6 +104,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
         Ok(())
     }
 
+    // execute until end of program
     pub fn execute(&mut self) -> Result<(), Box<dyn Error>> {
         while self.instr_ptr < self.instructions.len() {
             self.step()?;
@@ -109,6 +112,7 @@ impl<R: Read, W: Write> Interpreter<R, W> {
         Ok(())
     }
 
+    // perform syscall at current cell ptr
     unsafe fn syscall(&self) -> Result<u64, Box<dyn Error>> {
         let args = self.collect_args(self.cell_ptr + 4)?;
         let num: u32 = read_little_endian!(self.cells, self.cell_ptr, u32);
@@ -135,8 +139,8 @@ impl<R: Read, W: Write> Interpreter<R, W> {
             let arg_type = self.cells[arg_begin];
             let arg_raw: u64 = read_little_endian!(self.cells, arg_begin + 1, u64);
             let arg: u64 = match arg_type {
-                0 => arg_raw,
-                1 => {
+                0 => arg_raw, // integer
+                1 => { // pointer
                     let offset = arg_raw as usize;
                     if offset >= self.cells.len() {
                         return Err(format!("pointer out of bounds ({}) at cell {}", offset, arg_begin).into());
