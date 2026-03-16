@@ -1,0 +1,65 @@
+cell 0—3: syscall number
+cell 4: arg count
+cell 5: arg1 type
+cell 6—13: arg1
+cell 14: arg2 type
+cell 15—22: arg2
+cell 23: arg3 type
+cell 24—31: arg3
+cell 32—37: "hello\n" message
+
+syscall number 1 ("write" on x86_64 Linux)
++    01 >
+     00 >
+     00 >
+     00 >
+
++++  3 arguments >
+
+arg1
+     integer type (0) >
++    file descriptor 1 (stdout) >>>>>>>>
+
+arg2
++    pointer type (1) >
+>++++[<++++++++>-] cell position 35 >>>>>>>
+
+arg3
+     integer type (0) >
+++++++ length 6 >>>>>>>>
+
+write bytes and print with normal bf command
+>++++++++++[<++++++++++>-]<++++          h    .>
+>++++++++++[<++++++++++>-]<+             e    .>
+>++++++++++[<++++++++++>-]<++++++++      l    .>
+>++++++++++[<++++++++++>-]<++++++++      l    .>
+>++++++++++[<+++++++++++>-]<+            o    .>
+++++++++++                               \n   .
+
+return back to beginning
+<<<<<<<<<< <<<<<<<<<< <<<<<<<<<< <<<<<<<<<<
+
+print with syscall
+!
+
+
+now we will exit with exit syscall
+
+
+>>>>>>>>>> >>>>>>>>>> >>>>>>>>>> >>>>>>>>>> > 
+
+syscall number 60 ("exit" on x86_64 Linux)
+>++++++[<++++++++++>-]   60 
+                         00 >
+                         00 >
+                         00 >
+
++  1 argument >
+
+   integer type (0) > 
+>++++++[<++++++++++>-]<+++++++ 67 >>>>>>>
+
+<<<<<<< <<<<<<
+!
+
+well that was annoying to write
