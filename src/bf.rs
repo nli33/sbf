@@ -117,17 +117,27 @@ impl<R: Read, W: Write> Interpreter<R, W> {
     // perform syscall at current cell ptr
     unsafe fn syscall(&self) -> Result<u64, Box<dyn Error>> {
         let args = self.collect_args(self.cell_ptr + 4)?;
-        let num: u32 = read_little_endian!(self.cells, self.cell_ptr, u32);
+        let raw_num: u32 = read_little_endian!(self.cells, self.cell_ptr, u32);
+
+        #[cfg(all(target_os = "linux", target_pointer_width = "64"))]
+        let num = raw_num as libc::c_long; // i64 on x86_64 / ARM64
+
+        #[cfg(all(target_os = "linux", target_pointer_width = "32"))]
+        let num = raw_num as libc::c_long; // i32 on x86
+
+        #[cfg(target_os = "macos")]
+        let num = raw_num as i32; // macOS always i32
+
         Ok(unsafe {
             match args.len() {
-                0 => libc::syscall(num as i32),
-                1 => libc::syscall(num as i32, args[0]),
-                2 => libc::syscall(num as i32, args[0], args[1]),
-                3 => libc::syscall(num as i32, args[0], args[1], args[2]),
-                4 => libc::syscall(num as i32, args[0], args[1], args[2], args[3]),
-                5 => libc::syscall(num as i32, args[0], args[1], args[2], args[3], args[4]),
-                6 => libc::syscall(num as i32, args[0], args[1], args[2], args[3], args[4], args[5]),
-                _ => { return Err("too many syscall arguments".into()) }
+                0 => libc::syscall(num),
+                1 => libc::syscall(num, args[0]),
+                2 => libc::syscall(num, args[0], args[1]),
+                3 => libc::syscall(num, args[0], args[1], args[2]),
+                4 => libc::syscall(num, args[0], args[1], args[2], args[3]),
+                5 => libc::syscall(num, args[0], args[1], args[2], args[3], args[4]),
+                6 => libc::syscall(num, args[0], args[1], args[2], args[3], args[4], args[5]),
+                _ => return Err("too many syscall arguments".into()),
             }
         } as u64)
     }
